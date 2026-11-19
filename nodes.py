@@ -2,6 +2,8 @@ import time
 import os
 import threading
 import requests
+import subprocess
+
 
 class ComfyAnyType(str):
     def __ne__(self, __value: object) -> bool:
@@ -23,7 +25,6 @@ class ExitComfyUINode:
     RETURN_TYPES = ()
     CATEGORY = "utils"
 
-
     def sleep_and_exit(self, wait_seconds):
         for i in range(wait_seconds):
             print(f"Exit ComfyUI in {wait_seconds - i} seconds...")
@@ -32,11 +33,71 @@ class ExitComfyUINode:
         print("Exit ComfyUI!")
         os._exit(0)
 
-
     def exit_comfyui(self, any, wait_seconds):
         # 別スレッドで実行
         threading.Thread(target=self.sleep_and_exit, args=(wait_seconds,)).start()
         return (0, )
+
+
+class ShutdownPCNode:
+    """Schedule a Windows shutdown, allowing time to cancel it."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "any": (ComfyAnyType("*"), {}),
+                "delay_seconds": ("INT", {"default": 30, "min": 1, "max": 600}),
+            }
+        }
+
+    RETURN_TYPES = ()
+    FUNCTION = "schedule_shutdown"
+    OUTPUT_NODE = True
+    CATEGORY = "utils"
+
+    def schedule_shutdown(self, any, delay_seconds=30):
+        if os.name != "nt":
+            raise RuntimeError("Shutdown PC is only supported on Windows.")
+
+        try:
+            subprocess.run(
+                ["shutdown.exe", "/s", "/t", str(delay_seconds)],
+                check=True,
+            )
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise RuntimeError(f"Could not schedule Windows shutdown: {exc}") from exc
+
+        print(
+            f"[ShutdownPC] Windows shutdown scheduled in {delay_seconds} seconds. "
+            "Run the Cancel PC Shutdown node or `shutdown /a` to cancel."
+        )
+        return ()
+
+
+class CancelPCShutdownNode:
+    """Cancel a pending Windows shutdown."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {"any": (ComfyAnyType("*"), {})}}
+
+    RETURN_TYPES = ()
+    FUNCTION = "cancel_shutdown"
+    OUTPUT_NODE = True
+    CATEGORY = "utils"
+
+    def cancel_shutdown(self, any):
+        if os.name != "nt":
+            raise RuntimeError("Cancel PC Shutdown is only supported on Windows.")
+
+        try:
+            subprocess.run(["shutdown.exe", "/a"], check=True)
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise RuntimeError(f"Could not cancel Windows shutdown: {exc}") from exc
+
+        print("[CancelPCShutdown] Pending Windows shutdown cancelled.")
+        return ()
 
 
 class FetchApiNode:
@@ -55,8 +116,7 @@ class FetchApiNode:
     CATEGORY = "api"
 
     def execute(self, any, url):
-        return (requests.get(url).content, )    
-
+        return (requests.get(url).content, )
 
 
 class ExitWhenLastBatchConfirm:
@@ -208,12 +268,16 @@ class ExitWhenLastBatchConfirm:
 
 NODE_CLASS_MAPPINGS = {
     "ExitComfyUI": ExitComfyUINode,
+    "ShutdownPC": ShutdownPCNode,
+    "CancelPCShutdown": CancelPCShutdownNode,
     "FetchApi": FetchApiNode,
     "ExitWhenLastBatchConfirm": ExitWhenLastBatchConfirm,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "ExitComfyUI": "Exit ComfyUI",
+    "ShutdownPC": "Shutdown PC (Windows)",
+    "CancelPCShutdown": "Cancel PC Shutdown (Windows)",
     "FetchApi": "Fetch API",
     "ExitWhenLastBatchConfirm": "Exit when Last Batch",
 }

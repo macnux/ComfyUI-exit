@@ -2,7 +2,7 @@
 
 [English][<a href="README_ja.md">日本語</a>]
 
-Custom node to exit ComfyUI.
+Custom nodes to exit ComfyUI or schedule a Windows PC shutdown.
 
 ## Exit when Last Batch
 This custom node automatically terminates ComfyUI once all its executions have finished.\
@@ -32,7 +32,6 @@ It does not immediately shut down when it appears that “the number of remainin
 * If downstream processes require custom post-processing and you “prefer normal termination whenever possible”:
   Consider setting `hard_exit=False`
 
-
 ## Exit ComfyUI
 
 Exit ComfyUI after a specified number of seconds.
@@ -42,6 +41,22 @@ Exit ComfyUI after a specified number of seconds.
 Use this node if you want Google Colab to automatically terminate after mass generation.
 It is necessary to disconnect and delete the Google Colab runtime on the Notebook side.
 
+## Shutdown PC (Windows)
+
+Schedules a Windows PC shutdown using a 30-second countdown by default. The `delay_seconds` input can be set from 1 to 600 seconds. The Windows shutdown countdown gives you time to cancel before the PC powers off.
+
+To cancel from ComfyUI, run the **Cancel PC Shutdown (Windows)** node during the countdown. You can also cancel from a Windows command prompt with:
+
+```bat
+shutdown /a
+```
+
+This action shuts down the entire Windows computer, not just ComfyUI. The node only works on Windows. Save your work before using it.
+
+## Cancel PC Shutdown (Windows)
+
+Cancels a pending Windows shutdown started by this extension or another process.
+
 ## Fetch API
 
 Sends a request to the specified URL.
@@ -49,6 +64,8 @@ Sends a request to the specified URL.
 ![image](https://github.com/user-attachments/assets/f7e9a497-7579-4f91-ad11-d45e2e15630b)
 
 ## Change Log
+- V1.3.0
+  - Added Windows PC shutdown with a 30-second default cancellation countdown and a cancel node
 - V1.2.0 (September 29, 2025)
   - Added `Exit when Last Batch` node
 - V1.1.0 (December 31, 2024)
